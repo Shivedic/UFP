@@ -7,6 +7,7 @@ import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
@@ -34,12 +35,15 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.apps.Volley.Volley_Request;
 import com.example.fragment.AllPropertiesFragment;
 import com.example.fragment.FavouriteFragment;
 import com.example.fragment.HomeFragment;
 import com.example.fragment.LatestFragment;
+import com.example.fragment.MyEnquiriesFragment;
 import com.example.fragment.MyPropertiesFragment;
 import com.example.fragment.SettingFragment;
+import com.example.item.DailyPass;
 import com.example.item.ItemAbout;
 import com.example.item.ItemType;
 import com.example.util.Constant;
@@ -61,6 +65,8 @@ import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.irfaan008.irbottomnavigation.SpaceItem;
 import com.irfaan008.irbottomnavigation.SpaceNavigationView;
 import com.irfaan008.irbottomnavigation.SpaceOnClickListener;
@@ -72,6 +78,7 @@ import org.json.JSONObject;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 
@@ -94,6 +101,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private GoogleApiClient googleApiClient;
     private final static int REQUEST_CHECK_SETTINGS_GPS = 0x1;
     private final static int REQUEST_ID_MULTIPLE_PERMISSIONS = 0x2;
+    public static ArrayList<DailyPass> mListFlexiDp;
+    public static HashMap<String,String> countryMap = new HashMap<>();
+    public static HashMap<String,String> stateMap = new HashMap<>();
+    public static HashMap<String, List<String>> countryStateList = new HashMap<>();
+    public static HashMap<String, List<String>> stateCityList = new HashMap<>();
+    public static final String mypreference = "mypref";
+    public static final String pref_email = "pref_email";
+    public static final String pref_password = "pref_password";
+    public static final String pref_check = "pref_check";
+    private static SharedPreferences pref;
+    private static SharedPreferences.Editor editor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,6 +132,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         mListType = new ArrayList<>();
         mPropertyName = new ArrayList<>();
         mListItem = new ArrayList<>();
+        pref = getSharedPreferences(mypreference, 0); // 0 - for private mode
+        editor = pref.edit();
+
+
+        if (JsonUtils.isNetworkAvailable(MainActivity.this)) {
+            new getFlexiInfo().execute(Constant.FLEXIDP_INFO_URL);
+        }
+        Volley_Request postRequest = new Volley_Request();
+        postRequest.createRequest(getApplicationContext(), Constant.LOCATIONVAL_URL, "POST", "locationVal", "");
 
         HomeFragment homeFragment = new HomeFragment();
         fragmentManager.beginTransaction().replace(R.id.Container, homeFragment).commit();
@@ -121,14 +148,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         spaceNavigationView = findViewById(R.id.space);
         spaceNavigationView.initWithSaveInstanceState(savedInstanceState);
         spaceNavigationView.addSpaceItem(new SpaceItem(getString(R.string.menu_home), R.drawable.ic_home));
-        spaceNavigationView.addSpaceItem(new SpaceItem(getString(R.string.menu_latest), R.drawable.ic_latest));
+        spaceNavigationView.addSpaceItem(new SpaceItem(getString(R.string.menu_feature), R.drawable.ic_latest));
         spaceNavigationView.addSpaceItem(new SpaceItem(getString(R.string.menu_favourite), R.drawable.ic_favourite));
         spaceNavigationView.addSpaceItem(new SpaceItem(getString(R.string.menu_setting), R.drawable.ic_setting));
 
         spaceNavigationView.setSpaceOnClickListener(new SpaceOnClickListener() {
             @Override
             public void onCentreButtonClick() {
-                Intent intent = new Intent(MainActivity.this, AddPropertiesActivity.class);
+                //Intent intent = new Intent(MainActivity.this, AddPropertiesActivity.class);
+                Intent intent = new Intent(MainActivity.this, DpDashboardActivity.class);
+
                 startActivity(intent);
             }
 
@@ -142,10 +171,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         highLightNavigation(0, getString(R.string.menu_home));
                          break;
                     case 1:
-                        toolbar.setTitle(getString(R.string.menu_latest));
+                        toolbar.setTitle(R.string.menu_feature);
                         LatestFragment latestFragment = new LatestFragment();
                         fragmentManager.beginTransaction().replace(R.id.Container, latestFragment).commit();
-                        highLightNavigation(1 ,getString(R.string.menu_latest));
+                        highLightNavigation(1 ,getString(R.string.menu_feature));
                          break;
                     case 2:
                         toolbar.setTitle(getString(R.string.menu_favourite));
@@ -180,6 +209,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         fragmentManager.beginTransaction().replace(R.id.Container, homeFragment).commit();
                         spaceNavigationView.changeCurrentItem(0);
                         return true;
+                    case R.id.menu_enquiries:
+                        toolbar.setTitle(getString(R.string.menu_enq));
+                        MyEnquiriesFragment enqFragment = new MyEnquiriesFragment();
+                        fragmentManager.beginTransaction().replace(R.id.Container, enqFragment).commit();
+                        //spaceNavigationView.changeCurrentItem(1);
+                        return true;
+
                     case R.id.menu_go_latest:
                         toolbar.setTitle(getString(R.string.menu_latest));
                         LatestFragment latestFragment = new LatestFragment();
@@ -283,11 +319,115 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    public static void locationResponse(String response){
+        try{
+            JSONObject respObj = new JSONObject(response);
+
+            JSONObject countrylist = respObj.getJSONArray("locationdata").getJSONObject(0);
+            JSONArray countryArr = countrylist.getJSONArray("country_list");
+            for(int i=0; i<countryArr.length(); i++){
+                countryMap.put(countryArr.getJSONObject(i).getString("country_id"),countryArr.getJSONObject(i).getString("country_name"));
+            }
+
+            JSONArray stateArr = countrylist.getJSONArray("state_list");
+            for(int i=0; i<stateArr.length(); i++){
+                if(countryStateList.isEmpty()){
+                    ArrayList<String> temp = new ArrayList<>();
+                    temp.add(stateArr.getJSONObject(i).getString("state_name"));
+                    countryStateList.put(countryMap.get(stateArr.getJSONObject(i).getString("country_id")),temp);
+                    stateMap.put(stateArr.getJSONObject(i).getString("state_id"),stateArr.getJSONObject(i).getString("state_name"));
+                }
+                else {
+                    Log.d("myTag", "here  : " + countryMap.get(stateArr.getJSONObject(i).getString("country_id")));
+                    if(countryStateList.containsKey(countryMap.get(stateArr.getJSONObject(i).getString("country_id")))) {
+                        List<String> temp = countryStateList.get(countryMap.get(stateArr.getJSONObject(i).getString("country_id")));
+                        temp.add(stateArr.getJSONObject(i).getString("state_name"));
+                        countryStateList.put(countryMap.get(stateArr.getJSONObject(i).getString("country_id")), temp);
+                        stateMap.put(stateArr.getJSONObject(i).getString("state_id"), stateArr.getJSONObject(i).getString("state_name"));
+                    }
+                    else{
+                        ArrayList<String> temp = new ArrayList<>();
+                        temp.add(stateArr.getJSONObject(i).getString("state_name"));
+                        countryStateList.put(countryMap.get(stateArr.getJSONObject(i).getString("country_id")), temp);
+                        stateMap.put(stateArr.getJSONObject(i).getString("state_id"), stateArr.getJSONObject(i).getString("state_name"));
+                    }
+                    }
+
+            }
+
+            JSONArray cityArr = countrylist.getJSONArray("city_list");
+            for(int i=0; i<cityArr.length(); i++){
+                ArrayList<String> temp = new ArrayList<>();
+                if(stateCityList.isEmpty()){
+                    temp.add(cityArr.getJSONObject(i).getString("city_name"));
+                    stateCityList.put(stateMap.get(cityArr.getJSONObject(i).getString("state_id")),temp);
+                                   }
+                else {
+                    Log.d("myTag",cityArr.getJSONObject(i).getString("state_id") + " : " + stateMap.get(cityArr.getJSONObject(i).getString("state_id")) + " : " + stateCityList.containsKey(stateMap.get(cityArr.getJSONObject(i).getString("state_id"))));
+                    if(stateCityList.containsKey(stateMap.get(cityArr.getJSONObject(i).getString("state_id")))) {
+                        temp.addAll(stateCityList.get(stateMap.get(cityArr.getJSONObject(i).getString("state_id"))));
+                        temp.add(cityArr.getJSONObject(i).getString("city_name"));
+                    } else
+                    {
+                        temp.add(cityArr.getJSONObject(i).getString("city_name"));
+                    }
+                    stateCityList.put(stateMap.get(cityArr.getJSONObject(i).getString("state_id")),temp);
+                    }
+            }
+
+
+        }
+        catch(JSONException e){
+            Log.d("myTag", "error", e);
+        }
+    }
+
+
     public void highLightNavigation(int position, String name) {
 
         navigationView.getMenu().getItem(position).setChecked(true);
         toolbar.setTitle(name);
     }
+
+    @SuppressLint("StaticFieldLeak")
+    private class getFlexiInfo extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected String doInBackground(String... params) {
+            return JsonUtils.getJSONString(params[0]);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            if (null == result || result.length() == 0) {
+            } else {
+                try {
+                    mListFlexiDp = new ArrayList<>();
+                    JSONObject mainJson = new JSONObject(result);
+                    JSONArray jsonArray = mainJson.getJSONArray("enquirydata");
+                    JSONObject objJson;
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        objJson = jsonArray.getJSONObject(i);
+                        DailyPass objItem = new DailyPass();
+                        objItem.setType("Flexi");
+                        objItem.setDuration(objJson.getString(Constant.DP_DUR));
+                        objItem.setPrice(objJson.getString(Constant.DP_PRICE_INR));
+                        mListFlexiDp.add(objItem);
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+
 
     @SuppressLint("StaticFieldLeak")
     private class MyTaskAbout extends AsyncTask<String, Void, String> {
@@ -313,7 +453,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
                 try {
                     JSONObject mainJson = new JSONObject(result);
-                    JSONArray jsonArray = mainJson.getJSONArray(Constant.ARRAY_NAME);
+                    JSONArray jsonArray = mainJson.getJSONArray(Constant.ARRAY_NAME2);
                     JSONObject objJson;
                     for (int i = 0; i < jsonArray.length(); i++) {
                         objJson = jsonArray.getJSONObject(i);

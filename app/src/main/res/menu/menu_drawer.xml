@@ -10,6 +10,12 @@
             android:title="@string/menu_home" />
 
         <item
+            android:id="@+id/menu_enquiries"
+            android:checked="true"
+            android:icon="@drawable/ic_home"
+            android:title="@string/menu_enq" />
+
+        <item
             android:id="@+id/menu_go_latest"
             android:checked="false"
             android:icon="@drawable/ic_latest"

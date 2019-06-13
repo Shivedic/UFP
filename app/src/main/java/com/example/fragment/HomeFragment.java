@@ -32,10 +32,12 @@ import android.widget.Toast;
 import com.apps.realestate.HomeMoreActivity;
 import com.apps.realestate.MainActivity;
 import com.apps.realestate.PropertyDetailsActivity;
+import com.apps.realestate.PropertyView;
 import com.apps.realestate.R;
 import com.apps.realestate.SearchActivity;
 import com.example.adapter.HomeAdapter;
 import com.example.db.DatabaseHelper;
+import com.example.item.ItemCowork;
 import com.example.item.ItemProperty;
 import com.example.item.ItemType;
 import com.example.util.Constant;
@@ -51,6 +53,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 import me.relex.circleindicator.CircleIndicator;
 
@@ -58,10 +62,11 @@ public class HomeFragment extends Fragment {
 
     ScrollView mScrollView;
     ProgressBar mProgressBar;
-    ArrayList<ItemProperty> mSliderList;
+    ArrayList<ItemCowork> mSliderList;
     RecyclerView mPopularView, mLatestView;
     HomeAdapter mPopularAdapter, mLatestAdapter;
-    ArrayList<ItemProperty> mPopularList, mLatestList;
+    //ArrayList<ItemProperty> mLatestList;
+    ArrayList<ItemCowork> mPopularList,mLatestList;
     Button btnPopular, btnLatest;
     RelativeLayout lytRecent;
     DatabaseHelper databaseHelper;
@@ -73,7 +78,7 @@ public class HomeFragment extends Fragment {
     ArrayList<String> mPropertyName;
     EditText edtSearch;
     Button btnSubmit;
-    Spinner spinnerType, spinnerPurpose;
+    Spinner spinnerType, spinnerPurpose, spinnerState;
     String srt_type[];
     LinearLayout lay_home_bottom;
     private FragmentManager fragmentManager;
@@ -133,18 +138,23 @@ public class HomeFragment extends Fragment {
         btnSubmit = rootView.findViewById(R.id.btn_submit);
         spinnerType = rootView.findViewById(R.id.spPropertyType);
         spinnerPurpose = rootView.findViewById(R.id.spPropertyPurpose);
-
+        spinnerState = rootView.findViewById(R.id.spPropState);
 
         btnLatest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ((MainActivity) requireActivity()).highLightNavigation(1, getString(R.string.menu_latest));
+                /*
+                ((MainActivity) requireActivity()).highLightNavigation(1, getString(R.string.menu_feature));
                 ((MainActivity) requireActivity()).spaceNavigationView.changeCurrentItem(1);
                 LatestFragment latestFragment = new LatestFragment();
                 FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
                 fragmentTransaction.hide(HomeFragment.this);
                 fragmentTransaction.add(R.id.Container, latestFragment);
                 fragmentTransaction.commit();
+                */
+                Intent intent = new Intent(getActivity(), HomeMoreActivity.class);
+                intent.putExtra("callUrl", "Latest");
+                startActivity(intent);
             }
         });
 
@@ -152,6 +162,7 @@ public class HomeFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(getActivity(), HomeMoreActivity.class);
+                intent.putExtra("callUrl", "Popular");
                 startActivity(intent);
             }
         });
@@ -189,6 +200,7 @@ public class HomeFragment extends Fragment {
             } else {
 
                 try {
+
                     JSONObject mainJson = new JSONObject(result);
                     JSONObject jsonArray = mainJson.getJSONObject(Constant.ARRAY_NAME);
 
@@ -196,14 +208,14 @@ public class HomeFragment extends Fragment {
                     JSONObject objJsonSlider;
                     for (int i = 0; i < jsonSlider.length(); i++) {
                         objJsonSlider = jsonSlider.getJSONObject(i);
-                        ItemProperty objItem = new ItemProperty();
-                        objItem.setPId(objJsonSlider.getString(Constant.PROPERTY_ID));
-                        objItem.setPropertyName(objJsonSlider.getString(Constant.PROPERTY_TITLE));
-                        objItem.setPropertyThumbnailB(objJsonSlider.getString(Constant.PROPERTY_IMAGE));
-                        objItem.setPropertyAddress(objJsonSlider.getString(Constant.PROPERTY_ADDRESS));
-                        objItem.setPropertyPrice(objJsonSlider.getString(Constant.PROPERTY_PRICE));
-                        objItem.setRateAvg(objJsonSlider.getString(Constant.PROPERTY_RATE));
-                        objItem.setpropertyTotalRate(objJsonSlider.getString(Constant.PROPERTY_TOTAL_RATE));
+                        ItemCowork objItem = new ItemCowork();
+                        objItem.setPId(objJsonSlider.getString(Constant.PLACE_ID));
+                        objItem.setPropertyName(objJsonSlider.getString(Constant.PLACE_TITLE));
+                        objItem.setPropertyThumbnailB(objJsonSlider.getString(Constant.PLACE_IMAGE));
+                        objItem.setPropertyAddress(objJsonSlider.getString(Constant.PLACE_ADDRESS));
+                        objItem.setPropertyPrice("1001");
+                        objItem.setRateAvg(objJsonSlider.getString(Constant.PLACE_RATE));
+                        objItem.setpropertyTotalRate(objJsonSlider.getString(Constant.PLACE_TOTAL_RATE));
                         mSliderList.add(objItem);
                     }
 
@@ -211,18 +223,22 @@ public class HomeFragment extends Fragment {
                     JSONObject objJson;
                     for (int i = 0; i < jsonLatest.length(); i++) {
                         objJson = jsonLatest.getJSONObject(i);
-                        ItemProperty objItem = new ItemProperty();
-                        objItem.setPId(objJson.getString(Constant.PROPERTY_ID));
-                        objItem.setPropertyName(objJson.getString(Constant.PROPERTY_TITLE));
-                        objItem.setPropertyThumbnailB(objJson.getString(Constant.PROPERTY_IMAGE));
-                        objItem.setRateAvg(objJson.getString(Constant.PROPERTY_RATE));
-                        objItem.setPropertyPrice(objJson.getString(Constant.PROPERTY_PRICE));
-                        objItem.setPropertyBed(objJson.getString(Constant.PROPERTY_BED));
-                        objItem.setPropertyBath(objJson.getString(Constant.PROPERTY_BATH));
-                        objItem.setPropertyArea(objJson.getString(Constant.PROPERTY_AREA));
-                        objItem.setPropertyAddress(objJson.getString(Constant.PROPERTY_ADDRESS));
-                        objItem.setPropertyPurpose(objJson.getString(Constant.PROPERTY_PURPOSE));
-                        objItem.setpropertyTotalRate(objJson.getString(Constant.PROPERTY_TOTAL_RATE));
+                    ItemCowork objItem = new ItemCowork();
+                        objItem.setPId(objJson.getString(Constant.PLACE_ID));
+                        objItem.setPropertyName(objJson.getString(Constant.PLACE_TITLE));
+                        objItem.setPropertyThumbnailB(objJson.getString(Constant.PLACE_IMAGE));
+                        objItem.setRateAvg(objJson.getString(Constant.PLACE_RATE));
+                        objItem.setPropertyPrice("1001");
+                        //objItem.setPropertyBed(objJson.getString(Constant.PROPERTY_BED));
+                        //objItem.setPropertyBath(objJson.getString(Constant.PROPERTY_BATH));
+                        objItem.setPropertyStartTime(objJson.getString(Constant.PLACE_TIME_START));
+                        objItem.setPropertyEndTime(objJson.getString(Constant.PLACE_TIME_END));
+                        objItem.setPropertyWeekStart(objJson.getString(Constant.PLACE_WDSTART));
+                        objItem.setPropertyWeekEnd(objJson.getString(Constant.PLACE_WDEND));
+                        objItem.setPropertyArea("1000");
+                        objItem.setPropertyAddress(objJson.getString(Constant.PLACE_ADDRESS));
+                        objItem.setPropertyPurpose(objJson.getString(Constant.PLACE_PURPOSE));
+                        objItem.setpropertyTotalRate(objJson.getString(Constant.PLACE_TOTAL_RATE));
                         mLatestList.add(objItem);
                     }
 
@@ -230,18 +246,22 @@ public class HomeFragment extends Fragment {
                     JSONObject objJsonPopular;
                     for (int i = 0; i < jsonPopular.length(); i++) {
                         objJsonPopular = jsonPopular.getJSONObject(i);
-                        ItemProperty objItem = new ItemProperty();
-                        objItem.setPId(objJsonPopular.getString(Constant.PROPERTY_ID));
-                        objItem.setPropertyName(objJsonPopular.getString(Constant.PROPERTY_TITLE));
-                        objItem.setPropertyThumbnailB(objJsonPopular.getString(Constant.PROPERTY_IMAGE));
-                        objItem.setRateAvg(objJsonPopular.getString(Constant.PROPERTY_RATE));
-                        objItem.setPropertyPrice(objJsonPopular.getString(Constant.PROPERTY_PRICE));
-                        objItem.setPropertyBed(objJsonPopular.getString(Constant.PROPERTY_BED));
-                        objItem.setPropertyBath(objJsonPopular.getString(Constant.PROPERTY_BATH));
-                        objItem.setPropertyArea(objJsonPopular.getString(Constant.PROPERTY_AREA));
-                        objItem.setPropertyAddress(objJsonPopular.getString(Constant.PROPERTY_ADDRESS));
-                        objItem.setPropertyPurpose(objJsonPopular.getString(Constant.PROPERTY_PURPOSE));
-                        objItem.setpropertyTotalRate(objJsonPopular.getString(Constant.PROPERTY_TOTAL_RATE));
+                        ItemCowork objItem = new ItemCowork();
+                        objItem.setPId(objJsonPopular.getString(Constant.PLACE_ID));
+                        objItem.setPropertyName(objJsonPopular.getString(Constant.PLACE_TITLE));
+                        objItem.setPropertyThumbnailB(objJsonPopular.getString(Constant.PLACE_IMAGE));
+                        objItem.setRateAvg(objJsonPopular.getString(Constant.PLACE_RATE));
+                        objItem.setPropertyPrice("1001");
+                        //objItem.setPropertyBed(objJsonPopular.getString(Constant.PROPERTY_BED));
+                        //objItem.setPropertyBath(objJsonPopular.getString(Constant.PROPERTY_BATH));
+                        objItem.setPropertyStartTime(objJsonPopular.getString(Constant.PLACE_TIME_START));
+                        objItem.setPropertyEndTime(objJsonPopular.getString(Constant.PLACE_TIME_END));
+                        objItem.setPropertyWeekStart(objJsonPopular.getString(Constant.PLACE_WDSTART));
+                        objItem.setPropertyWeekEnd(objJsonPopular.getString(Constant.PLACE_WDEND));
+                        objItem.setPropertyArea("1000");
+                        objItem.setPropertyAddress(objJsonPopular.getString(Constant.PLACE_ADDRESS));
+                        objItem.setPropertyPurpose(objJsonPopular.getString(Constant.PLACE_PURPOSE));
+                        objItem.setpropertyTotalRate(objJsonPopular.getString(Constant.PLACE_TOTAL_RATE));
                         mPopularList.add(objItem);
                     }
 
@@ -318,38 +338,35 @@ public class HomeFragment extends Fragment {
 
     private void setResult2() {
 
-        ArrayAdapter<String> typeAdapter = new ArrayAdapter<>(requireActivity(), android.R.layout.simple_list_item_1, mPropertyName);
-        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        ArrayList<String> temp = new ArrayList<>();
+        temp.addAll(MainActivity.countryStateList.keySet());
+        temp.add(0, "Select Country");
+        ArrayAdapter<String> typeAdapter = new ArrayAdapter(requireActivity(), android.R.layout.simple_list_item_1, temp);
+        typeAdapter.setDropDownViewResource(R.layout.spinner_item_home);
         spinnerType.setAdapter(typeAdapter);
 
-        ArrayAdapter<String> typeAdapter2 = new ArrayAdapter<>(requireActivity(), R.layout.spinner_item_home, srt_type);
-        typeAdapter.setDropDownViewResource(R.layout.spinner_item_home);
-        spinnerPurpose.setAdapter(
-                new NothingSelectedSpinnerAdapter(typeAdapter2,
-                        R.layout.contact_spinner_row_nothing_selected_home, requireActivity()));
-        spinnerPurpose.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view,
-                                       int position, long id) {
-                // TODO Auto-generated method stub
-                if (position == 0) {
-                    ((TextView) parent.getChildAt(0)).setTextColor(getResources().getColor(R.color.gray_light));
-                    ((TextView) parent.getChildAt(0)).setTextSize(13);
+        ArrayList<String> temp2 = new ArrayList<>();
+        temp2.add(0, "Select State");
+        ArrayAdapter<String> typeAdapterState = new ArrayAdapter<>(requireActivity(), R.layout.spinner_item_home, temp2);
+        typeAdapterState.setDropDownViewResource(R.layout.spinner_item_home);
+//        spinnerState.setAdapter(
+  //              new NothingSelectedSpinnerAdapter(typeAdapterState,
+    //    R.layout.contact_spinner_row_nothing_selected_home, requireActivity()));
+        spinnerState.setAdapter(typeAdapterState);
 
-                } else {
-                    ((TextView) parent.getChildAt(0)).setTextColor(getResources().getColor(R.color.gray_light));
-                    ((TextView) parent.getChildAt(0)).setTextSize(13);
 
-                }
-            }
+        ArrayList<String> temp3 = new ArrayList<>();
+        temp3.add(0, "Select City");
+        ArrayAdapter<String> cityAdapter = new ArrayAdapter<>(requireActivity(), R.layout.spinner_item_home, temp3);
+        cityAdapter.setDropDownViewResource(R.layout.spinner_item_home);
+        spinnerPurpose.setAdapter(cityAdapter);
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // TODO Auto-generated method stub
+//        spinnerPurpose.setAdapter(
+  //              new NothingSelectedSpinnerAdapter(cityAdapter,
+    //                    R.layout.contact_spinner_row_nothing_selected_home, requireActivity()));
 
-            }
-        });
+
 
         spinnerType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
 
@@ -364,6 +381,74 @@ public class HomeFragment extends Fragment {
                 } else {
                     ((TextView) parent.getChildAt(0)).setTextColor(getResources().getColor(R.color.gray_light));
                     ((TextView) parent.getChildAt(0)).setTextSize(13);
+                    ArrayList<String> temp = new ArrayList<>();
+                    Log.d("myTag",  "Now : " + MainActivity.countryStateList.get(spinnerType.getSelectedItem().toString()));
+                    temp.addAll(MainActivity.countryStateList.get(spinnerType.getSelectedItem().toString()));
+                    temp.add(0, "Select State");
+                    ArrayAdapter<String> typeAdapterState = new ArrayAdapter<>(requireActivity(), R.layout.spinner_item_home, temp);
+                    typeAdapterState.setDropDownViewResource(R.layout.spinner_item_home);
+                    spinnerState.setAdapter(
+                            typeAdapterState);
+                    //spinnerState.setAdapter(
+                      //      new NothingSelectedSpinnerAdapter(typeAdapterState,
+                        //            R.layout.contact_spinner_row_nothing_selected_home, requireActivity()));
+                    spinnerState.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+                        @Override
+                        public void onItemSelected(AdapterView<?> parent, View view,
+                                                   int position, long id) {
+                            // TODO Auto-generated method stub
+                            if (position == 0) {
+                                ((TextView) parent.getChildAt(0)).setTextColor(getResources().getColor(R.color.gray_light));
+                                ((TextView) parent.getChildAt(0)).setTextSize(13);
+
+                            } else {
+                                ((TextView) parent.getChildAt(0)).setTextColor(getResources().getColor(R.color.gray_light));
+                                ((TextView) parent.getChildAt(0)).setTextSize(13);
+                                ArrayList<String> temp = new ArrayList<>();
+                                temp.addAll(MainActivity.stateCityList.get(spinnerState.getSelectedItem().toString()));
+                                temp.add(0, "Select City");
+                                ArrayAdapter<String> cityAdapter = new ArrayAdapter<>(requireActivity(), R.layout.spinner_item_home, temp);
+                                cityAdapter.setDropDownViewResource(R.layout.spinner_item_home);
+                                spinnerPurpose.setAdapter(
+                                        cityAdapter);
+
+//                                spinnerPurpose.setAdapter(
+  //                                      new NothingSelectedSpinnerAdapter(cityAdapter,
+    //                                            R.layout.contact_spinner_row_nothing_selected_home, requireActivity()));
+                                spinnerPurpose.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+
+                                    @Override
+                                    public void onItemSelected(AdapterView<?> parent, View view,
+                                                               int position, long id) {
+                                        // TODO Auto-generated method stub
+                                        if (position == 0) {
+                                            ((TextView) parent.getChildAt(0)).setTextColor(getResources().getColor(R.color.gray_light));
+                                            ((TextView) parent.getChildAt(0)).setTextSize(13);
+
+                                        } else {
+                                            ((TextView) parent.getChildAt(0)).setTextColor(getResources().getColor(R.color.gray_light));
+                                            ((TextView) parent.getChildAt(0)).setTextSize(13);
+
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onNothingSelected(AdapterView<?> parent) {
+                                        // TODO Auto-generated method stub
+
+                                    }
+                                });
+
+                            }
+                        }
+
+                        @Override
+                        public void onNothingSelected(AdapterView<?> parent) {
+                            // TODO Auto-generated method stub
+
+                        }
+                    });
 
                 }
             }
@@ -378,15 +463,15 @@ public class HomeFragment extends Fragment {
         btnSubmit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String search = edtSearch.getText().toString();
-                if (!search.isEmpty()) {
+                //String search = edtSearch.getText().toString();
+               // if (!search.isEmpty()) {
                     Intent intent = new Intent(getActivity(), SearchActivity.class);
-                    intent.putExtra("purpose", String.valueOf(spinnerPurpose.getSelectedItem()));
-                    intent.putExtra("TypeId", mListType.get(spinnerType.getSelectedItemPosition()).getTypeId());
-                    intent.putExtra("searchText", search);
+                    intent.putExtra("city", String.valueOf(spinnerPurpose.getSelectedItem()));
+                    intent.putExtra("state", String.valueOf(spinnerState.getSelectedItem()));
+                    intent.putExtra("country", String.valueOf(spinnerType.getSelectedItem()));
                     startActivity(intent);
-                    edtSearch.getText().clear();
-                }
+                   // edtSearch.getText().clear();
+                //}
             }
         });
 
@@ -453,13 +538,12 @@ public class HomeFragment extends Fragment {
             lytParent.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Intent intent = new Intent(getActivity(), PropertyDetailsActivity.class);
+                    Intent intent = new Intent(getActivity(), PropertyView.class);
                     intent.putExtra("Id", mSliderList.get(position).getPId());
                     startActivity(intent);
                 }
             });
             container.addView(imageLayout, 0);
-
             return imageLayout;
         }
 
@@ -472,5 +556,4 @@ public class HomeFragment extends Fragment {
     public void showToast(String msg) {
         Toast.makeText(getActivity(), msg, Toast.LENGTH_LONG).show();
     }
-
 }
